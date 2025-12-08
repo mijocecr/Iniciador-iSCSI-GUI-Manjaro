@@ -25,6 +25,7 @@
                
                
                >
+            
             <TextBlock Text="Conectar a iSCSI"
                        FontWeight="Bold"
                        FontSize="28"
@@ -34,9 +35,9 @@
                        VerticalAlignment="Center"
                        Padding="0  10 0 0"
                        Margin="0 10 0 0"
-                       />
+            />
                
-            
+           
             
         </Panel>
         <Separator VerticalAlignment="Bottom"
@@ -45,15 +46,24 @@
                    
                    
         />
-        <TextBlock
-            Text="Direccion IP:"
-            HorizontalAlignment="Left"
-            VerticalAlignment="Center"
-            Foreground="White"
-            FontWeight="Bold"
-            FontSize="20"
-            Padding="10,0,0,0"
-            Margin="0 20 0 10"/>
+        
+        <Grid RowDefinitions="*" ColumnDefinitions="*,*">
+            
+            <TextBlock Grid.Column="0"
+                Text="Direccion IP:"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Center"
+                Foreground="White"
+                FontWeight="Bold"
+                FontSize="20"
+                Padding="10,0,0,0"
+                Margin="0 20 0 10"/>
+        
+            
+        </Grid>
+        
+        
+       
         
         <Grid RowDefinitions="Auto,Auto"
               ColumnDefinitions="Auto,*,Auto"
@@ -106,31 +116,61 @@
             
             
         </Grid>
-        <ListBox Background="#151d23"
-                 Height="180"
-                 Margin="5 10 5 10"
-                 ItemsSource="{Binding Destinos}">
-            <ListBox.ItemTemplate>
-                <DataTemplate x:DataType="models:IscsiDestino">
-                    <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                        <!-- Selección manual -->
-                        <CheckBox Content="{Binding Iqn}"
-                                  IsChecked="{Binding Seleccionado, Mode=TwoWay}"/>
-
-                        <!-- Estado visual -->
-                        <Path Width="14" Height="14"
-                                     Data="{Binding Conectado, Converter={StaticResource EstadoToGeometryConverter}}"
-                                     Fill="{Binding Conectado, Converter={StaticResource BoolToColorConverter}}"
-                                     Stroke="DarkGray"
-                                     StrokeThickness="{Binding Conectado, Converter={StaticResource BoolToStrokeConverter}}"
-                                     Margin="6,0,0,0"
-                                     HorizontalAlignment="Right"/>
-                    </StackPanel>
-                </DataTemplate>
-            </ListBox.ItemTemplate>
-        </ListBox>
        
-      
+           
+            <ListBox Background="#151d23"
+                     Height="200"
+                     Margin="5 10 5 10"
+                     ItemsSource="{Binding Destinos}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="models:IscsiDestino">
+                        <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" Margin="5">
+                            <!-- Columna 0: Selección -->
+                            <CheckBox Grid.RowSpan="2"
+                                      Grid.Column="0"
+                                      Content=""
+                                      IsChecked="{Binding Seleccionado, Mode=TwoWay}"
+                                      VerticalAlignment="Center"
+                                      Margin="5"/>
+
+                            <!-- Columna 1, Fila 0: IQN + icono de estado -->
+                            <StackPanel Grid.Row="0" Grid.Column="1"
+                                        Orientation="Horizontal"
+                                        Spacing="8"
+                                        VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Iqn}"
+                                           Foreground="White"
+                                           FontWeight="Bold"
+                                           Margin="5,0,0,0"/>
+                                <Path Width="14" Height="14"
+                                      Data="{Binding Conectado, Converter={StaticResource EstadoToGeometryConverter}}"
+                                      Fill="{Binding Conectado, Converter={StaticResource BoolToColorConverter}}"
+                                      Stroke="DarkGray"
+                                      StrokeThickness="{Binding Conectado, Converter={StaticResource BoolToStrokeConverter}}"
+                                      Margin="6,0,0,0"
+                                      VerticalAlignment="Center"/>
+                            </StackPanel>
+
+                            <!-- Columna 1, Fila 1: Toggles -->
+                            <StackPanel Grid.Row="1" Grid.Column="1"
+                                        Orientation="Horizontal"
+                                        Spacing="15"
+                                        Margin="5,2,0,0">
+                                <ToggleSwitch IsChecked="{Binding UsaChap, Mode=TwoWay}"
+                                              Content="CHAP"
+                                              Width="90"
+                                              Margin="10 5 10 0"/>
+                                <ToggleSwitch 
+                                              Content="Persistir"
+                                              Width="90"
+                                              Margin="10 5 10 0"/>
+                            </StackPanel>
+                        </Grid>
+                    </DataTemplate>
+
+                </ListBox.ItemTemplate>
+            </ListBox>
+
         <Grid   RowSpacing = "5" ShowGridLines="False" RowDefinitions="*,*" ColumnDefinitions="Auto,*,*">
             <TextBlock Grid.Column="0"
                        Grid.Row="0"
@@ -191,9 +231,22 @@
            <Image Grid.Column="0"
                   Height="50"
                   Width="100"
-                  Margin="0 15 10 0"
-                  Source="../Assets/avalonia-logo.ico"
+                  Margin="10 15 10 0"
+                  
+                  
+                  Source="../Assets/Manjaro-logo.png"
+                  HorizontalAlignment="Left"
                   />
+           <TextBlock Grid.Column="0"
+                      HorizontalAlignment="Center"
+                      VerticalAlignment="Stretch"
+                      Foreground="White"
+                      FontWeight="DemiBold"
+                      FontSize="25"
+                      Height="50"
+                      Padding="0 15 0 0"
+                      Text="Manjaro"/>
+           
            <Button Grid.Column="1"
                    Grid.Row="0"
                    HorizontalAlignment="Center"
@@ -228,6 +281,7 @@
            
            
        </Grid>
+        
         
     </StackPanel>
   

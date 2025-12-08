@@ -121,7 +121,7 @@ public partial class MainWindowViewModel : ObservableObject
 
         Console.WriteLine($"Se descubrieron {Destinos.Count} destinos.");
     }
-
+/*
     [RelayCommand]
     private void ConectarSeleccionados()
     {
@@ -129,7 +129,39 @@ public partial class MainWindowViewModel : ObservableObject
         {
             IscsiHelper.Conectar(destino);
         }
+    }*/
+
+
+
+    [RelayCommand]
+    private void ConectarSeleccionados()
+    {
+        foreach (var destino in Destinos.Where(d => d.Seleccionado))
+        {
+            if (destino.UsaChap)
+            {
+                if (!string.IsNullOrWhiteSpace(Usuario) && !string.IsNullOrWhiteSpace(Password))
+                {
+                    destino.UsuarioChap = Usuario;
+                    destino.PasswordChap = Password;
+                }
+                else
+                {
+                    Console.WriteLine($"[WARN] CHAP habilitado pero sin Usuario/Password para {destino.Iqn}. Saltando.");
+                    continue;
+                }
+            }
+            else
+            {
+                // Asegurar que no queden credenciales previas
+                destino.UsuarioChap = null;
+                destino.PasswordChap = null;
+            }
+
+            IscsiHelper.Conectar(destino);
+        }
     }
+
 
     [RelayCommand]
     private void DesconectarSeleccionados()

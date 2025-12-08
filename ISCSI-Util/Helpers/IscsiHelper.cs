@@ -313,7 +313,93 @@ public static class IscsiHelper
     #endregion
     ///////////////////////////////////////////////////////////////
 
-  
+    
+    
+    public static void Conectar(IscsiDestino destino)
+{
+    try
+    {
+        // 0. Verificar si ya hay sesión activa
+        var sesionesOut = Ejecutar("sudo", "-S iscsiadm -m session");
+        bool yaConectado = sesionesOut.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                                      .Any(s => s.Contains(destino.Iqn));
+
+        if (!yaConectado)
+        {
+            // 1. Configurar CHAP si el destino lo requiere
+            if (destino.UsaChap)
+            {
+                Ejecutar("sudo", $"-S iscsiadm -m node -T {destino.Iqn} -p {destino.Ip} --op=update --name node.session.auth.authmethod --value=CHAP");
+                Ejecutar("sudo", $"-S iscsiadm -m node -T {destino.Iqn} -p {destino.Ip} --op=update --name node.session.auth.username --value={destino.UsuarioChap}");
+                Ejecutar("sudo", $"-S iscsiadm -m node -T {destino.Iqn} -p {destino.Ip} --op=update --name node.session.auth.password --value={destino.PasswordChap}");
+            }
+
+            // 2. Login al destino
+            Ejecutar("sudo", $"-S iscsiadm -m node -T {destino.Iqn} -p {destino.Ip} --login");
+        }
+
+        // 3. Crear carpeta de montaje
+        destino.MountPoint = $"/mnt/iscsi/{FileSystemUtils.SanitizarNombre(destino.Iqn)}";
+        Ejecutar("sudo", $"-S mkdir -p {destino.MountPoint}");
+
+        // 4. Buscar symlink real en /dev/disk/by-path
+        var output = Ejecutar("ls", "-1 /dev/disk/by-path/");
+        foreach (var line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (line.Contains(destino.Ip) && line.Contains("lun"))
+            {
+                destino.DevicePath = "/dev/disk/by-path/" + line.Trim();
+                break;
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(destino.DevicePath))
+            throw new InvalidOperationException($"No se encontró symlink para el destino {destino.Iqn} (IP {destino.Ip}).");
+
+        // 5. Buscar partición
+        var lsblkOut = Ejecutar("lsblk", "-rno NAME " + destino.DevicePath);
+        var lines = lsblkOut.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        if (lines.Length > 1)
+        {
+            destino.DevicePath = "/dev/" + lines[1].Trim(); // primera partición
+        }
+
+        // 6. Detectar filesystem
+        var blkidOut = Ejecutar("blkid", destino.DevicePath);
+        string fsType = "ext4"; // fallback
+        if (blkidOut.Contains("TYPE=\"ext2\"")) fsType = "ext2";
+        else if (blkidOut.Contains("TYPE=\"ext3\"")) fsType = "ext3";
+        else if (blkidOut.Contains("TYPE=\"ext4\"")) fsType = "ext4";
+        else if (blkidOut.Contains("TYPE=\"xfs\"")) fsType = "xfs";
+        else if (blkidOut.Contains("TYPE=\"btrfs\"")) fsType = "btrfs";
+        else if (blkidOut.Contains("TYPE=\"f2fs\"")) fsType = "f2fs";
+        else if (blkidOut.Contains("TYPE=\"ntfs\"")) fsType = "ntfs";
+        else if (blkidOut.Contains("TYPE=\"vfat\"")) fsType = "vfat";
+        else if (blkidOut.Contains("TYPE=\"exfat\"")) fsType = "exfat";
+        else if (blkidOut.Contains("TYPE=\"iso9660\"")) fsType = "iso9660";
+
+        // 7. Montar el dispositivo
+        Ejecutar("sudo", $"-S mount -t {fsType} {destino.DevicePath} {destino.MountPoint}");
+
+        // 8. Ajustar grupo y permisos
+        string grupo = ObtenerGrupoUsuario();
+        Ejecutar("sudo", $"-S chgrp {grupo} {destino.MountPoint}");
+        Ejecutar("sudo", $"-S chmod 770 {destino.MountPoint}");
+        Ejecutar("sudo", $"-S chmod g+s {destino.MountPoint}");
+
+        destino.Conectado = true;
+        NotificadorLinux.Enviar($"Destino {destino.Iqn} conectado en {destino.MountPoint}");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error al conectar destino {destino.Iqn}: {ex.Message}");
+    }
+}
+
+    
+    
+    
+ /* 
     public static void Conectar(IscsiDestino destino)
 {
     try
@@ -387,7 +473,7 @@ public static class IscsiHelper
         Console.WriteLine($"Error al conectar destino {destino.Iqn}: {ex.Message}");
         
     }
-}
+}*/
 
     
     public static void Desconectar(IscsiDestino destino)

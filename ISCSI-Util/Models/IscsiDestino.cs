@@ -11,6 +11,13 @@ public class IscsiDestino : INotifyPropertyChanged
     private string _mountPoint;
     private string _ip;
     private string _iqn;
+    
+    
+    // Campos para CHAP
+    public bool UsaChap { get; set; } = false;
+    public string UsuarioChap { get; set; }
+    public string PasswordChap { get; set; }
+    
 
     public string Ip
     {

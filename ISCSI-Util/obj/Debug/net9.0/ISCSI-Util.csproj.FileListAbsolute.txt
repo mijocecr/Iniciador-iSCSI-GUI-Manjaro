@@ -72,3 +72,4 @@
 /home/miguel/RiderProjects/ISCSI-Util/ISCSI-Util/obj/Debug/net9.0/ISCSI-Util.pdb
 /home/miguel/RiderProjects/ISCSI-Util/ISCSI-Util/obj/Debug/net9.0/ISCSI-Util.genruntimeconfig.cache
 /home/miguel/RiderProjects/ISCSI-Util/ISCSI-Util/obj/Debug/net9.0/ref/ISCSI-Util.dll
+/home/miguel/RiderProjects/ISCSI-Util/ISCSI-Util/obj/Debug/net9.0/ISCSI-Util.sourcelink.json
