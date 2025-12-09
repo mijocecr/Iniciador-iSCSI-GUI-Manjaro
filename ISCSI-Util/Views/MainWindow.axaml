@@ -163,6 +163,7 @@
                                 <ToggleSwitch 
                                               Content="Persistir"
                                               Width="90"
+                                              IsChecked="{Binding Persistir, Mode=TwoWay}"
                                               Margin="10 5 10 0"/>
                             </StackPanel>
                         </Grid>

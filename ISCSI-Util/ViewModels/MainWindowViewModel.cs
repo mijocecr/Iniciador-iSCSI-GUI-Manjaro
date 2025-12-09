@@ -1,24 +1,25 @@
-﻿/*using System;
+﻿/*
+
+using System;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
 using Avalonia.Controls.ApplicationLifetimes;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ISCSI_Util.Helpers;
 using ISCSI_Util.Models;
-using ISCSI_Util.Utils;
 
 namespace ISCSI_Util.ViewModels;
 
-public partial class MainWindowViewModel: ObservableObject
+public partial class MainWindowViewModel : ObservableObject
 {
-    
-   
     public ObservableCollection<IscsiDestino> Destinos { get; } = new();
 
     [ObservableProperty] private string usuario;
     [ObservableProperty] private string password;
-    
+    [ObservableProperty] private bool persistir;   // Toggle persistencia
+
     private string _ipServidor;
     public string IpServidor
     {
@@ -26,12 +27,12 @@ public partial class MainWindowViewModel: ObservableObject
         set => SetProperty(ref _ipServidor, value);
     }
 
-    
-    
-    
+    // Comando asíncrono para descubrir
     [RelayCommand]
-    public void DescubrirDestinos()
+    public async Task DescubrirDestinosAsync()
     {
+        await EnsurePasswordAsync();
+
         Destinos.Clear();
 
         if (string.IsNullOrWhiteSpace(IpServidor))
@@ -48,29 +49,68 @@ public partial class MainWindowViewModel: ObservableObject
         Console.WriteLine($"Se descubrieron {Destinos.Count} destinos.");
     }
 
-
-
+    // Conectar seleccionados con persistencia opcional
     [RelayCommand]
     private void ConectarSeleccionados()
     {
         foreach (var destino in Destinos.Where(d => d.Seleccionado))
         {
+            if (destino.UsaChap)
+            {
+                if (!string.IsNullOrWhiteSpace(Usuario) && !string.IsNullOrWhiteSpace(Password))
+                {
+                    destino.UsuarioChap = Usuario;
+                    destino.PasswordChap = Password;
+                }
+                else
+                {
+                    Console.WriteLine($"[WARN] CHAP habilitado pero sin Usuario/Password para {destino.Iqn}. Saltando.");
+                    continue;
+                }
+            }
+            else
+            {
+                destino.UsuarioChap = null;
+                destino.PasswordChap = null;
+            }
+
             IscsiHelper.Conectar(destino);
+
+            if (Persistir)
+            {
+                // Configurar persistencia y servicio
+                IscsiHelper.ConfigurarPersistencia(destino, "ext4"); 
+                IscsiHelper.CrearServicioPersistencia(destino);
+            }
         }
     }
 
+    // Desconectar seleccionados y eliminar persistencia si aplica
     [RelayCommand]
     private void DesconectarSeleccionados()
     {
         foreach (var destino in Destinos.Where(d => d.Seleccionado))
         {
             IscsiHelper.Desconectar(destino);
+
+            if (Persistir)
+            {
+                IscsiHelper.EliminarServicioPersistencia(destino);
+            }
         }
     }
-    
-    
-}*/
 
+    // Método auxiliar para abrir el PasswordDialog
+    private async Task EnsurePasswordAsync()
+    {
+        if (App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop &&
+            desktop.MainWindow is ISCSI_Util.Views.MainWindow mw)
+        {
+            await mw.SolicitarPassword();
+        }
+    }
+}
+*/
 
 using System;
 using System.Collections.ObjectModel;
@@ -98,11 +138,10 @@ public partial class MainWindowViewModel : ObservableObject
         set => SetProperty(ref _ipServidor, value);
     }
 
-    // Comando asíncrono
+    // Comando asíncrono para descubrir
     [RelayCommand]
     public async Task DescubrirDestinosAsync()
     {
-        // 1. Pedir contraseña si no está guardada
         await EnsurePasswordAsync();
 
         Destinos.Clear();
@@ -113,7 +152,6 @@ public partial class MainWindowViewModel : ObservableObject
             return;
         }
 
-        // 2. Descubrir destinos
         var encontrados = IscsiHelper.Descubrir(IpServidor);
 
         foreach (var destino in encontrados)
@@ -121,18 +159,8 @@ public partial class MainWindowViewModel : ObservableObject
 
         Console.WriteLine($"Se descubrieron {Destinos.Count} destinos.");
     }
-/*
-    [RelayCommand]
-    private void ConectarSeleccionados()
-    {
-        foreach (var destino in Destinos.Where(d => d.Seleccionado))
-        {
-            IscsiHelper.Conectar(destino);
-        }
-    }*/
 
-
-
+    // Conectar seleccionados con persistencia opcional por destino
     [RelayCommand]
     private void ConectarSeleccionados()
     {
@@ -153,22 +181,32 @@ public partial class MainWindowViewModel : ObservableObject
             }
             else
             {
-                // Asegurar que no queden credenciales previas
                 destino.UsuarioChap = null;
                 destino.PasswordChap = null;
             }
 
             IscsiHelper.Conectar(destino);
+
+            if (destino.Persistir)
+            {
+                IscsiHelper.ConfigurarPersistencia(destino, "ext4");
+                IscsiHelper.CrearServicioPersistencia(destino);
+            }
         }
     }
 
-
+    // Desconectar seleccionados y eliminar persistencia si aplica
     [RelayCommand]
     private void DesconectarSeleccionados()
     {
         foreach (var destino in Destinos.Where(d => d.Seleccionado))
         {
             IscsiHelper.Desconectar(destino);
+
+            if (destino.Persistir)
+            {
+                IscsiHelper.EliminarServicioPersistencia(destino);
+            }
         }
     }
 
@@ -182,3 +220,4 @@ public partial class MainWindowViewModel : ObservableObject
         }
     }
 }
+
