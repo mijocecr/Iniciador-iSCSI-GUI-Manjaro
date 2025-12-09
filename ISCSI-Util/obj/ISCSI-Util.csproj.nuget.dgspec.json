@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "/home/miguel/RiderProjects/ISCSI-Util/ISCSI-Util/ISCSI-Util.csproj": {}
+    "/home/miguel/RiderProjects/Iniciador-iSCSI-GUI-Manjaro/ISCSI-Util/ISCSI-Util.csproj": {}
   },
   "projects": {
-    "/home/miguel/RiderProjects/ISCSI-Util/ISCSI-Util/ISCSI-Util.csproj": {
+    "/home/miguel/RiderProjects/Iniciador-iSCSI-GUI-Manjaro/ISCSI-Util/ISCSI-Util.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/home/miguel/RiderProjects/ISCSI-Util/ISCSI-Util/ISCSI-Util.csproj",
+        "projectUniqueName": "/home/miguel/RiderProjects/Iniciador-iSCSI-GUI-Manjaro/ISCSI-Util/ISCSI-Util.csproj",
         "projectName": "ISCSI-Util",
-        "projectPath": "/home/miguel/RiderProjects/ISCSI-Util/ISCSI-Util/ISCSI-Util.csproj",
+        "projectPath": "/home/miguel/RiderProjects/Iniciador-iSCSI-GUI-Manjaro/ISCSI-Util/ISCSI-Util.csproj",
         "packagesPath": "/home/miguel/.nuget/packages/",
-        "outputPath": "/home/miguel/RiderProjects/ISCSI-Util/ISCSI-Util/obj/",
+        "outputPath": "/home/miguel/RiderProjects/Iniciador-iSCSI-GUI-Manjaro/ISCSI-Util/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "/home/miguel/.nuget/NuGet/NuGet.Config"
