@@ -8,8 +8,10 @@
         mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="580"
         x:Class="ISCSI_Util.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Icon="/Assets/avalonia-logo.ico"
+        Icon="/Assets/icon.png"
         Title="ISCSI_Util">
+    
+    
     
 
     <Design.DataContext>
@@ -17,6 +19,9 @@
              to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
         <vm:MainWindowViewModel />
     </Design.DataContext>
+    
+    
+    
 
     <StackPanel Background="#151d23">
         <Panel HorizontalAlignment="Stretch"
@@ -42,7 +47,8 @@
         </Panel>
         <Separator VerticalAlignment="Bottom"
                    HorizontalAlignment="Stretch"
-                   Margin="0 0 0 0"
+                   Margin="0 3 0 0"
+                   Background="white"
                    
                    
         />
@@ -57,7 +63,7 @@
                 FontWeight="Bold"
                 FontSize="20"
                 Padding="10,0,0,0"
-                Margin="0 20 0 10"/>
+                Margin="0 10 0 10"/>
         
             
         </Grid>
@@ -97,7 +103,7 @@
                 />
             <Button Grid.Row="1" Grid.Column="2" 
                     Width="150"
-                    Height="50"
+                    Height="45"
                     Content="Descubrir Destinos"
                     VerticalContentAlignment="Center"
                     
@@ -119,12 +125,12 @@
        
            
             <ListBox Background="#151d23"
-                     Height="200"
+                     Height="210"
                      Margin="5 10 5 10"
                      ItemsSource="{Binding Destinos}">
                 <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="models:IscsiDestino">
-                        <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" Margin="5">
+                        <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto" Margin="5">
                             <!-- Columna 0: Selección -->
                             <CheckBox Grid.RowSpan="2"
                                       Grid.Column="0"
@@ -142,29 +148,37 @@
                                            Foreground="White"
                                            FontWeight="Bold"
                                            Margin="5,0,0,0"/>
-                                <Path Width="14" Height="14"
-                                      Data="{Binding Conectado, Converter={StaticResource EstadoToGeometryConverter}}"
-                                      Fill="{Binding Conectado, Converter={StaticResource BoolToColorConverter}}"
-                                      Stroke="DarkGray"
-                                      StrokeThickness="{Binding Conectado, Converter={StaticResource BoolToStrokeConverter}}"
-                                      Margin="6,0,0,0"
-                                      VerticalAlignment="Center"/>
+                               
                             </StackPanel>
+                            
+                            
+                            <Path Grid.RowSpan="2" Grid.Row="0" Grid.Column="2"  Width="14" Height="14"
+                                  Data="{Binding Conectado, Converter={StaticResource EstadoToGeometryConverter}}"
+                                  Fill="{Binding Conectado, Converter={StaticResource BoolToColorConverter}}"
+                                  Stroke="DarkGray"
+                                  StrokeThickness="{Binding Conectado, Converter={StaticResource BoolToStrokeConverter}}"
+                                  Margin="0,0,10,0"
+                                  
+                                  VerticalAlignment="Center"
+                                  HorizontalAlignment="Right"/>
+                            
 
                             <!-- Columna 1, Fila 1: Toggles -->
                             <StackPanel Grid.Row="1" Grid.Column="1"
                                         Orientation="Horizontal"
                                         Spacing="15"
-                                        Margin="5,2,0,0">
+                                        Margin="5,2,0,0"
+                                       >
                                 <ToggleSwitch IsChecked="{Binding UsaChap, Mode=TwoWay}"
                                               Content="CHAP"
                                               Width="90"
-                                              Margin="10 5 10 0"/>
+                                              
+                                              Margin="10 0 10 0"/>
                                 <ToggleSwitch 
                                               Content="Persistir"
                                               Width="90"
                                               IsChecked="{Binding Persistir, Mode=TwoWay}"
-                                              Margin="10 5 10 0"/>
+                                              Margin="10 2 10 0"/>
                             </StackPanel>
                         </Grid>
                     </DataTemplate>
@@ -184,7 +198,7 @@
                        FontSize="15"
                        />
             <TextBlock Grid.Column="0"
-                       Grid.Row="2"
+                       Grid.Row="1"
                        Text="Password:"
                        HorizontalAlignment="Center"
                        VerticalAlignment="Center"
@@ -224,13 +238,13 @@
         <Separator VerticalAlignment="Bottom"
                    HorizontalAlignment="Stretch"
                    Margin="0 10 0 0"
-                   
+                   Background="white"
                    
         />
         
        <Grid RowDefinitions="*" ColumnDefinitions="*,Auto,Auto">
            <Image Grid.Column="0"
-                  Height="50"
+                  Height="45"
                   Width="100"
                   Margin="10 15 10 0"
                   
@@ -244,7 +258,7 @@
                       Foreground="White"
                       FontWeight="DemiBold"
                       FontSize="25"
-                      Height="50"
+                      Height="45"
                       Padding="0 15 0 0"
                       Text="Manjaro"/>
            
@@ -252,7 +266,7 @@
                    Grid.Row="0"
                    HorizontalAlignment="Center"
                    VerticalAlignment="Center"
-                   Height="50"
+                   Height="45"
                    Content="Desconectar"
                    Command="{Binding DesconectarSeleccionadosCommand}"
                    HorizontalContentAlignment="Center"
@@ -269,7 +283,7 @@
                    VerticalAlignment="Center"
                    VerticalContentAlignment="Center"
                    
-                   Height="50"
+                   Height="45"
                    Content="Conectar"
                    Command="{Binding ConectarSeleccionadosCommand}"
                    Background="#00aaa7"

@@ -186,6 +186,7 @@ public partial class MainWindowViewModel : ObservableObject
             }
 
             IscsiHelper.Conectar(destino);
+            IscsiHelper.Conectar(destino); //Esta llamada doble es intencional - no tocar
 
             if (destino.Persistir)
             {

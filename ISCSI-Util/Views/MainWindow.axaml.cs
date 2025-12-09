@@ -16,7 +16,8 @@ namespace ISCSI_Util.Views
             this.MinWidth = 500;
             this.MaxHeight = 580;
             this.MaxWidth = 500;
-
+            this.Title = "iSCSI Util";
+            
             DataContext = new MainWindowViewModel();
         }
 

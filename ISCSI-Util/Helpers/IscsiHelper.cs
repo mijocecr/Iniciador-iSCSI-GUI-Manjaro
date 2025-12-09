@@ -162,6 +162,7 @@ public static class IscsiHelper
     }
 
     // Conectar
+  
     public static void Conectar(IscsiDestino destino)
     {
         try
@@ -227,11 +228,6 @@ public static class IscsiHelper
         }
     }
 
-  
- 
-   
-    
-    
     // Los demás métodos (Desconectar, CrearServicioPersistencia, Eliminar
 
     // Desconectar
@@ -306,56 +302,7 @@ public static class IscsiHelper
     }
 }
 
-  /*
- 
-    public static void ConfigurarPersistencia(IscsiDestino destino, string fsType)
-    {
-        try
-        {
-            // 1. Marcar nodo como automático
-            Ejecutar("sudo",
-                $"-S iscsiadm -m node -T {destino.Iqn} -p {destino.Ip} --op update --name node.startup --value automatic");
 
-            // 2. Obtener UUID de la partición exacta (parseo robusto)
-            var blkidOut = Ejecutar("sudo", $"-S blkid {destino.PartitionPath}");
-            string uuid = blkidOut.Split(' ')
-                .FirstOrDefault(s => s.StartsWith("UUID="))?
-                .Replace("UUID=", "")
-                .Trim('"');
-
-            if (string.IsNullOrEmpty(uuid))
-                throw new Exception($"No se pudo obtener UUID para {destino.PartitionPath}");
-
-            // 3. Comprobar si ya existe en /etc/fstab por UUID o MountPoint (sin sudo, grep puede leer fstab)
-            var checkUuid = Ejecutar("grep", $"-q '{uuid}' /etc/fstab && echo exists");
-            var checkMount = Ejecutar("grep", $"-q '{destino.MountPoint}' /etc/fstab && echo exists");
-
-            if (!checkUuid.Contains("exists") && !checkMount.Contains("exists"))
-            {
-                // 4. Backup antes de modificar
-                Ejecutar("sudo", "-S cp /etc/fstab /etc/fstab.bak");
-
-                // 5. Añadir entrada solo si no existe (usando espacios, no tabs)
-                string fstabEntry = $"UUID={uuid} {destino.MountPoint} {fsType} defaults,_netdev 0 0";
-                Ejecutar("sudo", $"-S bash -c \"echo '{fstabEntry}' | tee -a /etc/fstab\"");
-
-                // 6. Validar que fstab sigue siendo correcto
-                Ejecutar("sudo", "-S mount -a");
-
-                NotificadorLinux.Enviar($"Persistencia configurada para {destino.Iqn} en {destino.MountPoint}");
-            }
-            else
-            {
-                NotificadorLinux.Enviar($"El destino {destino.Iqn} ya estaba configurado en /etc/fstab");
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error al configurar persistencia para {destino.Iqn}: {ex.Message}");
-        }
-    }
-*/
-    
     
     
  
