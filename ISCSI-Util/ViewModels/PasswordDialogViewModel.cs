@@ -1,24 +1,25 @@
-
-
 using System;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using ISCSI_Util.Utils;
 
 namespace ISCSI_Util.ViewModels
 {
-    public class PasswordDialogViewModel:ObservableObject
+    public class PasswordDialogViewModel : ObservableObject
     {
-        public string Password { get; set; }
+        private string _password;
+        public string Password
+        {
+            get => _password;
+            set => SetProperty(ref _password, value);
+        }
 
         public RelayCommand AceptarCommand { get; }
 
         public PasswordDialogViewModel(Action<string> onPasswordEntered)
         {
-            // Versión sin parámetros
             AceptarCommand = new RelayCommand(() =>
             {
-                Credenciales.AdminPassword = Password;
+                // Solo devolver la contraseña al callback
                 onPasswordEntered?.Invoke(Password);
             });
         }

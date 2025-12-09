@@ -23,8 +23,7 @@ namespace ISCSI_Util.Views
 
         public async Task SolicitarPassword()
         {
-            if (string.IsNullOrEmpty(Credenciales.AdminPassword))
-            {
+           
                 // Primero se crea el diálogo
                 var dialog = new PasswordDialog();
 
@@ -36,7 +35,7 @@ namespace ISCSI_Util.Views
                 });
 
                 await dialog.ShowDialog(this);
-            }
+            
         }
     }
 }

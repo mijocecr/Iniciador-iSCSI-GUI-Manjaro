@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.IO;
+using System.Text;
 using ISCSI_Util.Models;
 using ISCSI_Util.Utils;
 
@@ -75,40 +76,94 @@ public static class IscsiHelper
     
     // Helper genérico que inyecta la contraseña guardada
     
+  
+    
     private static string Ejecutar(string fileName, string args)
+{
+    Console.WriteLine($"[DEBUG] Ejecutar → fileName='{fileName}', args='{args}'");
+
+    var psi = new ProcessStartInfo
     {
-        var process = new Process
-        {
-            StartInfo = new ProcessStartInfo
-            {
-                FileName = fileName,
-                Arguments = args,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                RedirectStandardInput = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            }
-        };
-        process.Start();
+        FileName = fileName,
+        Arguments = args,
+        RedirectStandardOutput = true,
+        RedirectStandardError = true,
+        RedirectStandardInput = true,
+        UseShellExecute = false,
+        CreateNoWindow = true
+    };
 
-        // Inyectar contraseña solo si es sudo -S
-        if (fileName == "sudo" && args.Contains("-S") && !string.IsNullOrEmpty(Credenciales.AdminPassword))
-        {
-            // Escribir la contraseña seguida de salto de línea
-            process.StandardInput.Write(Credenciales.AdminPassword + "\n");
-            process.StandardInput.Flush();
-        }
+    using var process = new Process { StartInfo = psi };
 
-        string output = process.StandardOutput.ReadToEnd();
-        string error = process.StandardError.ReadToEnd();
-        process.WaitForExit();
+    var outputBuilder = new StringBuilder();
+    var errorBuilder = new StringBuilder();
 
-        if (!string.IsNullOrWhiteSpace(error))
-            Console.WriteLine($"Error ejecutando {fileName}: {error}");
+    process.OutputDataReceived += (s, e) =>
+    {
+        if (e.Data != null) outputBuilder.AppendLine(e.Data);
+    };
+    process.ErrorDataReceived += (s, e) =>
+    {
+        if (e.Data != null) errorBuilder.AppendLine(e.Data);
+    };
 
-        return output;
+    Console.WriteLine("[DEBUG] Iniciando proceso...");
+    process.Start();
+
+    // Comenzar lectura asíncrona
+    process.BeginOutputReadLine();
+    process.BeginErrorReadLine();
+
+    // Inyectar contraseña solo si es sudo -S
+    if (fileName == "sudo" && args.Contains("-S") && !string.IsNullOrEmpty(Credenciales.AdminPassword))
+    {
+        Console.WriteLine("[DEBUG] Inyectando contraseña en stdin...");
+    var pass = Credenciales.AdminPassword?.TrimEnd('\r', '\n');
+process.StandardInput.WriteLine(pass);
+process.StandardInput.Flush();
+process.StandardInput.Close();
     }
+    else
+    {
+        Console.WriteLine("[DEBUG] No se inyectó contraseña (no es sudo -S o está vacía).");
+    }
+
+    // Esperar con timeout
+    const int timeoutMs = 3000;
+    if (!process.WaitForExit(timeoutMs))
+    {
+        NotificadorLinux.Enviar("[ERROR] Timeout esperando al proceso, se aborta.");
+        Console.WriteLine("[ERROR] Timeout esperando al proceso, se aborta.");
+        try { process.Kill(); } catch { /* ignorar */ }
+        return string.Empty;
+    }
+
+    // Asegurar que todo el buffer asíncrono haya sido volcado
+    process.WaitForExit(); // llamada adicional segura para finalizar eventos
+
+    string output = outputBuilder.ToString();
+    string error = errorBuilder.ToString();
+
+    Console.WriteLine($"[DEBUG] ExitCode={process.ExitCode}");
+    if (!string.IsNullOrWhiteSpace(error))
+        Console.WriteLine($"[DEBUG] stderr:\n{error}");
+
+    // Detección de fallo de autenticación sin depender del texto
+    if (fileName == "sudo" && process.ExitCode != 0)
+    {
+        NotificadorLinux.Enviar("[ERROR] Fallo de autenticación de sudo (ExitCode != 0). Se aborta.");
+        Console.WriteLine("[ERROR] Fallo de autenticación de sudo (ExitCode != 0). Se aborta.");
+        Credenciales.AdminPassword = string.Empty;
+        try { if (!process.HasExited) process.Kill(); } catch { /* ignorar */ }
+        
+        return string.Empty;
+    }
+
+    Console.WriteLine("[DEBUG] Proceso terminado correctamente.");
+    Console.WriteLine("[DEBUG] stdout:\n" + output);
+    return output;
+}
+
     
     
     private static int EjecutarConCodigo(string fileName, string args)
