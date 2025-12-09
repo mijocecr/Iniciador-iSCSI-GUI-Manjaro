@@ -129,7 +129,7 @@ process.StandardInput.Close();
     }
 
     // Esperar con timeout
-    const int timeoutMs = 3000;
+    const int timeoutMs = 5000;
     if (!process.WaitForExit(timeoutMs))
     {
         NotificadorLinux.Enviar("[ERROR] Timeout esperando al proceso, se aborta.");
@@ -149,15 +149,32 @@ process.StandardInput.Close();
         Console.WriteLine($"[DEBUG] stderr:\n{error}");
 
     // Detección de fallo de autenticación sin depender del texto
+  
+    
     if (fileName == "sudo" && process.ExitCode != 0)
     {
         NotificadorLinux.Enviar("[ERROR] Fallo de autenticación de sudo (ExitCode != 0). Se aborta.");
         Console.WriteLine("[ERROR] Fallo de autenticación de sudo (ExitCode != 0). Se aborta.");
         Credenciales.AdminPassword = string.Empty;
-        try { if (!process.HasExited) process.Kill(); } catch { /* ignorar */ }
-        
+
+        try
+        {
+            // cerrar stdin para que sudo reciba EOF
+            if (!process.StandardInput.BaseStream.CanWrite)
+                process.StandardInput.Close();
+        }
+        catch { /* ignorar */ }
+
+        try
+        {
+            if (!process.HasExited)
+                process.Kill(); // terminar sudo de inmediato
+        }
+        catch { /* ignorar */ }
+
         return string.Empty;
     }
+
 
     Console.WriteLine("[DEBUG] Proceso terminado correctamente.");
     Console.WriteLine("[DEBUG] stdout:\n" + output);
