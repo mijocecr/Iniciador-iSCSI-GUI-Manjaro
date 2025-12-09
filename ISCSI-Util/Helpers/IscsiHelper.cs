@@ -306,7 +306,7 @@ public static class IscsiHelper
     }
 }
 
-  
+  /*
  
     public static void ConfigurarPersistencia(IscsiDestino destino, string fsType)
     {
@@ -354,10 +354,65 @@ public static class IscsiHelper
             Console.WriteLine($"Error al configurar persistencia para {destino.Iqn}: {ex.Message}");
         }
     }
+*/
+    
+    
+    
+ 
+  public static void ConfigurarPersistencia(IscsiDestino destino, string fsType)
+  {
+      try
+      {
+          // 1. Marcar nodo como automático
+          Ejecutar("sudo",
+              $"-S iscsiadm -m node -T {destino.Iqn} -p {destino.Ip} --op update --name node.startup --value automatic");
 
-    
-    
-    
+          // 2. Obtener UUID de la partición
+          var blkidOut = Ejecutar("sudo", $"-S blkid {destino.PartitionPath}");
+          string uuid = blkidOut.Split(' ')
+              .FirstOrDefault(s => s.StartsWith("UUID="))?
+              .Replace("UUID=", "")
+              .Trim('"');
+
+          if (string.IsNullOrEmpty(uuid))
+              throw new Exception($"No se pudo obtener UUID para {destino.PartitionPath}");
+
+          // 3. Construir la línea que se añadiría
+          string fstabEntry = $"UUID={uuid} {destino.MountPoint} {fsType} defaults,_netdev 0 0";
+
+          // 4. Leer fstab completo
+          string fstabContent = Ejecutar("cat", "/etc/fstab");
+
+          // 5. Verificar si el UUID ya existe en alguna línea
+          bool uuidExists = fstabContent
+              .Split('\n')
+              .Any(line => line.Contains($"UUID={uuid}"));
+
+          if (!uuidExists)
+          {
+              // 6. Backup
+              Ejecutar("sudo", "-S cp /etc/fstab /etc/fstab.bak");
+
+              // 7. Añadir entrada
+              Ejecutar("sudo", $"-S bash -c \"echo '{fstabEntry}' | tee -a /etc/fstab\"");
+
+              // 8. Validar
+              Ejecutar("sudo", "-S mount -a");
+
+              NotificadorLinux.Enviar($"Persistencia configurada para {destino.Iqn} en {destino.MountPoint}");
+          }
+          else
+          {
+              NotificadorLinux.Enviar($"El UUID {uuid} ya existe en /etc/fstab, no se añadió duplicado.");
+          }
+      }
+      catch (Exception ex)
+      {
+          Console.WriteLine($"Error al configurar persistencia para {destino.Iqn}: {ex.Message}");
+      }
+  }
+
+ 
     
 // CrearServicioPersistencia
    
