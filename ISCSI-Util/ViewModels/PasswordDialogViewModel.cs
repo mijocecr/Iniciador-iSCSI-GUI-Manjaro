@@ -1,4 +1,6 @@
 using System;
+using System.Runtime.CompilerServices;
+using System.Xml;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -12,9 +14,13 @@ namespace ISCSI_Util.ViewModels
             get => _password;
             set => SetProperty(ref _password, value);
         }
+        
+        
 
         public RelayCommand AceptarCommand { get; }
-
+        
+        
+        
         public PasswordDialogViewModel(Action<string> onPasswordEntered)
         {
             AceptarCommand = new RelayCommand(() =>
@@ -22,6 +28,9 @@ namespace ISCSI_Util.ViewModels
                 // Solo devolver la contraseña al callback
                 onPasswordEntered?.Invoke(Password);
             });
+            
+            
         }
+
     }
 }

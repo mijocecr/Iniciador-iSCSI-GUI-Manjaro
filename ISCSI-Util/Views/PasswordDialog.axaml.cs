@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
+using CommunityToolkit.Mvvm.Input;
 
 namespace ISCSI_Util.Views // ← usa guion bajo, no guion
 {
@@ -10,5 +11,6 @@ namespace ISCSI_Util.Views // ← usa guion bajo, no guion
         {
             InitializeComponent();
         }
+ 
     }
 }
