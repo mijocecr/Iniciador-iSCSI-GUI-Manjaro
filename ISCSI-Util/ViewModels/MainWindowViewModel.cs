@@ -138,6 +138,9 @@ public partial class MainWindowViewModel : ObservableObject
         set => SetProperty(ref _ipServidor, value);
     }
 
+    
+    
+    
     // Comando asíncrono para descubrir
     [RelayCommand]
     public async Task DescubrirDestinosAsync()

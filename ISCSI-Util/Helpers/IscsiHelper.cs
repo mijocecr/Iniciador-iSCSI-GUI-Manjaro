@@ -548,6 +548,39 @@ WantedBy=multi-user.target
     }
 
 
+    
+    
+    public static void AsegurarServicioIscsid()
+    {
+        try
+        {
+            // Comprobar estado actual del servicio
+            var estado = Ejecutar("systemctl", "is-active iscsid").Trim();
+
+            if (estado != "active")
+            {
+                NotificadorLinux.Enviar("El servicio iscsid no está activo. Habilitando y arrancando...");
+
+                // Habilitar y arrancar el servicio inmediatamente
+                Ejecutar("sudo", "-S systemctl enable --now iscsid");
+
+                // Recargar systemd para asegurar que reconoce el demonio
+                Ejecutar("sudo", "-S systemctl daemon-reexec");
+
+                Console.WriteLine("[INFO] Servicio iscsid habilitado y arrancado.");
+            }
+            else
+            {
+                Console.WriteLine("[DEBUG] iscsid ya está activo.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] No se pudo asegurar el servicio iscsid: {ex.Message}");
+            NotificadorLinux.Enviar("[ERROR] Fallo al comprobar/arrancar iscsid.");
+        }
+    }
+
+    
 
 }
-

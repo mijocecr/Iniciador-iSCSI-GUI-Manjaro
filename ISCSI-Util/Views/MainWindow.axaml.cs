@@ -1,5 +1,7 @@
+using System;
 using System.Threading.Tasks;
 using Avalonia.Controls;
+using ISCSI_Util.Helpers;
 using ISCSI_Util.Utils;
 using ISCSI_Util.ViewModels;
 
@@ -21,12 +23,28 @@ namespace ISCSI_Util.Views
             DataContext = new MainWindowViewModel();
         }
 
+        
+        // Este evento se dispara cuando la ventana ya está visible
+        protected override async void OnOpened(EventArgs e)
+        {
+            base.OnOpened(e);
+
+            // Llamar a tu método existente
+            await SolicitarPassword();
+
+            // Una vez guardada la contraseña en Credenciales.AdminPassword,
+            // arrancar el demonio iscsid
+            IscsiHelper.AsegurarServicioIscsid();
+        }
+        
+        
+        
         public async Task SolicitarPassword()
         {
            
                 // Primero se crea el diálogo
                 var dialog = new PasswordDialog();
-
+dialog.WindowStartupLocation = WindowStartupLocation.CenterScreen;
                 // Luego se asigna el DataContext
                 dialog.DataContext = new PasswordDialogViewModel(pass =>
                 {
