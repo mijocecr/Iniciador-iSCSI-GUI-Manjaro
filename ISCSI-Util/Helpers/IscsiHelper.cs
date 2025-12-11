@@ -235,70 +235,102 @@ process.StandardInput.Close();
 
     // Conectar
   
+   
     public static void Conectar(IscsiDestino destino)
+{
+    try
     {
-        try
+        Console.WriteLine($"[DEBUG] Iniciando conexión para IQN={destino.Iqn}, IP={destino.Ip}, UsaChap={destino.UsaChap}");
+
+        var sesionesOut = Ejecutar("sudo", "-S iscsiadm -m session");
+        bool yaConectado = sesionesOut.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+            .Any(s => s.Contains(destino.Iqn));
+
+        if (!yaConectado)
         {
-            var sesionesOut = Ejecutar("sudo", "-S iscsiadm -m session");
-            bool yaConectado = sesionesOut.Split('\n', StringSplitOptions.RemoveEmptyEntries)
-                .Any(s => s.Contains(destino.Iqn));
+            Ejecutar("sudo", $"-S iscsiadm -m node -T {destino.Iqn} -p {destino.Ip}");
 
-            if (!yaConectado)
+            if (destino.UsaChap)
             {
-                if (destino.UsaChap)
-                {
-                    Ejecutar("sudo",
-                        $"-S iscsiadm -m node -T {destino.Iqn} -p {destino.Ip} --op=update --name node.session.auth.authmethod --value=CHAP");
-                    Ejecutar("sudo",
-                        $"-S iscsiadm -m node -T {destino.Iqn} -p {destino.Ip} --op=update --name node.session.auth.username --value={destino.UsuarioChap}");
-                    Ejecutar("sudo",
-                        $"-S iscsiadm -m node -T {destino.Iqn} -p {destino.Ip} --op=update --name node.session.auth.password --value={destino.PasswordChap}");
-                }
-
-                Ejecutar("sudo", $"-S iscsiadm -m node -T {destino.Iqn} -p {destino.Ip} --login");
+                Ejecutar("sudo",
+                    $"-S iscsiadm -m node -T {destino.Iqn} -p {destino.Ip} --op=update --name node.session.auth.authmethod --value=CHAP");
+                Ejecutar("sudo",
+                    $"-S iscsiadm -m node -T {destino.Iqn} -p {destino.Ip} --op=update --name node.session.auth.username --value={destino.UsuarioChap}");
+                Ejecutar("sudo",
+                    $"-S iscsiadm -m node -T {destino.Iqn} -p {destino.Ip} --op=update --name node.session.auth.password --value={destino.PasswordChap}");
             }
 
-            destino.MountPoint = $"/mnt/iscsi/{FileSystemUtils.SanitizarNombre(destino.Iqn)}";
-            Ejecutar("sudo", $"-S mkdir -p {destino.MountPoint}");
+            Ejecutar("sudo", $"-S iscsiadm -m node -T {destino.Iqn} -p {destino.Ip} --login");
+        }
 
+        destino.MountPoint = $"/mnt/iscsi/{FileSystemUtils.SanitizarNombre(destino.Iqn)}";
+        Ejecutar("sudo", $"-S mkdir -p {destino.MountPoint}");
+
+        // Esperar symlink
+        destino.DevicePath = null;
+        for (int i = 0; i < 10; i++)
+        {
             var output = Ejecutar("ls", "-1 /dev/disk/by-path/");
-            foreach (var line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+            var match = output.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                              .FirstOrDefault(line => line.Contains(destino.Ip) && line.Contains("lun"));
+            if (match != null)
             {
-                if (line.Contains(destino.Ip) && line.Contains("lun"))
-                {
-                    destino.DevicePath = "/dev/disk/by-path/" + line.Trim();
-                    break;
-                }
+                destino.DevicePath = "/dev/disk/by-path/" + match.Trim();
+                break;
             }
-
-            if (string.IsNullOrWhiteSpace(destino.DevicePath))
-                throw new InvalidOperationException($"No se encontró symlink para {destino.Iqn} (IP {destino.Ip}).");
-
-            var lsblkOut = Ejecutar("lsblk", "-rno NAME " + destino.DevicePath);
-            var lines = lsblkOut.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-            if (lines.Length > 1)
-                destino.PartitionPath = "/dev/" + lines[1].Trim();
-            else
-                destino.PartitionPath = destino.DevicePath;
-
-            var blkidOut = Ejecutar("blkid", destino.PartitionPath);
-            string fsType = DetectarFsType(blkidOut);
-
-            Ejecutar("sudo", $"-S mount -t {fsType} {destino.PartitionPath} {destino.MountPoint}");
-
-            string grupo = ObtenerGrupoUsuario();
-            Ejecutar("sudo", $"-S chgrp {grupo} {destino.MountPoint}");
-            Ejecutar("sudo", $"-S chmod 770 {destino.MountPoint}");
-            Ejecutar("sudo", $"-S chmod g+s {destino.MountPoint}");
-
-            destino.Conectado = true;
-            NotificadorLinux.Enviar($"Destino {destino.Iqn} conectado en {destino.MountPoint}");
+            System.Threading.Thread.Sleep(1000);
         }
-        catch (Exception ex)
+
+        if (string.IsNullOrWhiteSpace(destino.DevicePath))
+            throw new InvalidOperationException($"No se encontró symlink para {destino.Iqn} (IP {destino.Ip}).");
+
+        var lsblkOut = Ejecutar("lsblk", "-rno NAME " + destino.DevicePath);
+        var lines = lsblkOut.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+
+        if (lines.Length > 1)
         {
-            Console.WriteLine($"Error al conectar destino {destino.Iqn}: {ex.Message}");
+            destino.PartitionPath = "/dev/" + lines[1].Trim();
         }
+        else
+        {
+            destino.PartitionPath = destino.DevicePath;
+            Console.WriteLine("[DEBUG] Disco bruto detectado, no se intentará montar.");
+            NotificadorLinux.Enviar($"Destino {destino.Iqn} conectado como disco bruto. Inicialícelo antes de montar.");
+            destino.Conectado = true;
+            return;
+        }
+
+        var blkidOut = Ejecutar("blkid", destino.PartitionPath);
+        string fsType = DetectarFsType(blkidOut);
+
+        if (string.IsNullOrWhiteSpace(blkidOut))
+        {
+            Console.WriteLine("[DEBUG] No se detectó filesystem válido. No se montará.");
+            NotificadorLinux.Enviar($"Destino {destino.Iqn} no tiene filesystem. Cree uno antes de montar.");
+            destino.Conectado = true;
+            return;
+        }
+
+        Ejecutar("sudo", $"-S mount -t {fsType} {destino.PartitionPath} {destino.MountPoint}");
+
+        string grupo = ObtenerGrupoUsuario();
+        Ejecutar("sudo", $"-S chgrp {grupo} {destino.MountPoint}");
+        Ejecutar("sudo", $"-S chmod 770 {destino.MountPoint}");
+        Ejecutar("sudo", $"-S chmod g+s {destino.MountPoint}");
+
+        destino.Conectado = true;
+        NotificadorLinux.Enviar($"Destino {destino.Iqn} conectado y montado en {destino.MountPoint}");
     }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[ERROR] Error al conectar destino {destino.Iqn}: {ex.Message}");
+        NotificadorLinux.Enviar($"[ERROR] Fallo al conectar destino {destino.Iqn}");
+    }
+}
+
+    
+    
+    
 
     // Los demás métodos (Desconectar, CrearServicioPersistencia, Eliminar
 
