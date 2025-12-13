@@ -134,6 +134,8 @@
                             <!-- Columna 0: Selección -->
                             <CheckBox Grid.RowSpan="2"
                                       Grid.Column="0"
+                                
+                                      ToolTip.Tip="Marca esta casilla para seleccionar el destino"
                                       Content=""
                                       IsChecked="{Binding Seleccionado, Mode=TwoWay}"
                                       VerticalAlignment="Center"
@@ -166,17 +168,20 @@
                             <!-- Columna 1, Fila 1: Toggles -->
                             <StackPanel Grid.Row="1" Grid.Column="1"
                                         Orientation="Horizontal"
+                                        
                                         Spacing="15"
                                         Margin="5,2,0,0"
                                        >
                                 <ToggleSwitch IsChecked="{Binding UsaChap, Mode=TwoWay}"
                                               Content="CHAP"
                                               Width="90"
-                                              
+                                              Foreground="LightCoral"
                                               Margin="10 0 10 0"/>
                                 <ToggleSwitch 
                                               Content="Persistir"
                                               Width="90"
+                                              ToolTip.Tip="Mantener este destino conectado cuando reinicie sistema"
+                                              Foreground="DeepSkyBlue"
                                               IsChecked="{Binding Persistir, Mode=TwoWay}"
                                               Margin="10 2 10 0"/>
                             </StackPanel>
