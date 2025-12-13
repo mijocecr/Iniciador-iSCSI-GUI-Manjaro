@@ -236,7 +236,7 @@ process.StandardInput.Close();
     // Conectar
   
    
-    public static void Conectar(IscsiDestino destino)
+   public static void Conectar(IscsiDestino destino)
 {
     try
     {
@@ -252,12 +252,9 @@ process.StandardInput.Close();
 
             if (destino.UsaChap)
             {
-                Ejecutar("sudo",
-                    $"-S iscsiadm -m node -T {destino.Iqn} -p {destino.Ip} --op=update --name node.session.auth.authmethod --value=CHAP");
-                Ejecutar("sudo",
-                    $"-S iscsiadm -m node -T {destino.Iqn} -p {destino.Ip} --op=update --name node.session.auth.username --value={destino.UsuarioChap}");
-                Ejecutar("sudo",
-                    $"-S iscsiadm -m node -T {destino.Iqn} -p {destino.Ip} --op=update --name node.session.auth.password --value={destino.PasswordChap}");
+                Ejecutar("sudo", $"-S iscsiadm -m node -T {destino.Iqn} -p {destino.Ip} --op=update --name node.session.auth.authmethod --value=CHAP");
+                Ejecutar("sudo", $"-S iscsiadm -m node -T {destino.Iqn} -p {destino.Ip} --op=update --name node.session.auth.username --value={destino.UsuarioChap}");
+                Ejecutar("sudo", $"-S iscsiadm -m node -T {destino.Iqn} -p {destino.Ip} --op=update --name node.session.auth.password --value={destino.PasswordChap}");
             }
 
             Ejecutar("sudo", $"-S iscsiadm -m node -T {destino.Iqn} -p {destino.Ip} --login");
@@ -284,6 +281,7 @@ process.StandardInput.Close();
         if (string.IsNullOrWhiteSpace(destino.DevicePath))
             throw new InvalidOperationException($"No se encontró symlink para {destino.Iqn} (IP {destino.Ip}).");
 
+        // Detectar partición o disco bruto
         var lsblkOut = Ejecutar("lsblk", "-rno NAME " + destino.DevicePath);
         var lines = lsblkOut.Split('\n', StringSplitOptions.RemoveEmptyEntries);
 
@@ -293,23 +291,21 @@ process.StandardInput.Close();
         }
         else
         {
-            destino.PartitionPath = destino.DevicePath;
-            Console.WriteLine("[DEBUG] Disco bruto detectado, no se intentará montar.");
-            NotificadorLinux.Enviar($"Destino {destino.Iqn} conectado como disco bruto. Inicialícelo antes de montar.");
-            destino.Conectado = true;
-            return;
+            destino.PartitionPath = destino.DevicePath; // disco bruto, aún puede tener FS
+            Console.WriteLine("[DEBUG] Disco bruto detectado, se intentará montar directamente.");
         }
 
-        var blkidOut = Ejecutar("blkid", destino.PartitionPath);
-        string fsType = DetectarFsType(blkidOut);
-
+        // Usar sudo para blkid
+        var blkidOut = Ejecutar("sudo", "-S blkid " + destino.PartitionPath);
         if (string.IsNullOrWhiteSpace(blkidOut))
         {
-            Console.WriteLine("[DEBUG] No se detectó filesystem válido. No se montará.");
+            Console.WriteLine("[DEBUG] No se detectó filesystem válido en " + destino.PartitionPath);
             NotificadorLinux.Enviar($"Destino {destino.Iqn} no tiene filesystem. Cree uno antes de montar.");
             destino.Conectado = true;
             return;
         }
+
+        string fsType = DetectarFsType(blkidOut);
 
         Ejecutar("sudo", $"-S mount -t {fsType} {destino.PartitionPath} {destino.MountPoint}");
 
@@ -328,7 +324,6 @@ process.StandardInput.Close();
     }
 }
 
-    
     
     
 
@@ -410,60 +405,45 @@ process.StandardInput.Close();
     
     
  
-  public static void ConfigurarPersistencia(IscsiDestino destino, string fsType)
-  {
-      try
-      {
-          // 1. Marcar nodo como automático
-          Ejecutar("sudo",
-              $"-S iscsiadm -m node -T {destino.Iqn} -p {destino.Ip} --op update --name node.startup --value automatic");
+    public static void ConfigurarPersistencia(IscsiDestino destino, string fsType)
+    {
+        try
+        {
+            Ejecutar("sudo", $"-S iscsiadm -m node -T {destino.Iqn} -p {destino.Ip} --op update --name node.startup --value automatic");
 
-          // 2. Obtener UUID de la partición
-          var blkidOut = Ejecutar("sudo", $"-S blkid {destino.PartitionPath}");
-          string uuid = blkidOut.Split(' ')
-              .FirstOrDefault(s => s.StartsWith("UUID="))?
-              .Replace("UUID=", "")
-              .Trim('"');
+            var blkidOut = Ejecutar("sudo", $"-S blkid {destino.PartitionPath}");
+            string uuid = blkidOut.Split(' ')
+                .FirstOrDefault(s => s.StartsWith("UUID="))?
+                .Replace("UUID=", "")
+                .Trim('"');
 
-          if (string.IsNullOrEmpty(uuid))
-              throw new Exception($"No se pudo obtener UUID para {destino.PartitionPath}");
+            if (string.IsNullOrEmpty(uuid))
+                throw new Exception($"No se pudo obtener UUID para {destino.PartitionPath}");
 
-          // 3. Construir la línea que se añadiría
-          string fstabEntry = $"UUID={uuid} {destino.MountPoint} {fsType} defaults,_netdev 0 0";
+            string fstabEntry = $"UUID={uuid} {destino.MountPoint} {fsType} defaults,_netdev 0 0";
 
-          // 4. Leer fstab completo
-          string fstabContent = Ejecutar("cat", "/etc/fstab");
+            string fstabContent = Ejecutar("cat", "/etc/fstab");
+            bool uuidExists = fstabContent.Split('\n').Any(line => line.Contains($"UUID={uuid}"));
 
-          // 5. Verificar si el UUID ya existe en alguna línea
-          bool uuidExists = fstabContent
-              .Split('\n')
-              .Any(line => line.Contains($"UUID={uuid}"));
+            if (!uuidExists)
+            {
+                Ejecutar("sudo", "-S cp /etc/fstab /etc/fstab.bak");
+                Ejecutar("sudo", $"-S bash -c \"echo '{fstabEntry}' | tee -a /etc/fstab\"");
+                Ejecutar("sudo", "-S mount -a");
 
-          if (!uuidExists)
-          {
-              // 6. Backup
-              Ejecutar("sudo", "-S cp /etc/fstab /etc/fstab.bak");
+                NotificadorLinux.Enviar($"Persistencia configurada para {destino.Iqn} en {destino.MountPoint}");
+            }
+            else
+            {
+                NotificadorLinux.Enviar($"El UUID {uuid} ya existe en /etc/fstab, no se añadió duplicado.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al configurar persistencia para {destino.Iqn}: {ex.Message}");
+        }
+    }
 
-              // 7. Añadir entrada
-              Ejecutar("sudo", $"-S bash -c \"echo '{fstabEntry}' | tee -a /etc/fstab\"");
-
-              // 8. Validar
-              Ejecutar("sudo", "-S mount -a");
-
-              NotificadorLinux.Enviar($"Persistencia configurada para {destino.Iqn} en {destino.MountPoint}");
-          }
-          else
-          {
-              NotificadorLinux.Enviar($"El UUID {uuid} ya existe en /etc/fstab, no se añadió duplicado.");
-          }
-      }
-      catch (Exception ex)
-      {
-          Console.WriteLine($"Error al configurar persistencia para {destino.Iqn}: {ex.Message}");
-      }
-  }
-
- 
     
 // CrearServicioPersistencia
    
