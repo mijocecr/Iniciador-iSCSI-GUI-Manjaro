@@ -33,6 +33,8 @@ Incluye soporte para notificaciones en Linux mediante `notify-send`.
 
 ## ⚙️ Instalación
 
+Manjaro/Arch: yay -S iscsi-util
+
 Clona el repositorio y compila con `dotnet`:
 
 ```bash
